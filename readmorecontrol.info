@@ -1,1 +1,8 @@
+; $Id$
 name = Read More Control
+description = Options to control when the Read More link is displayed on Node teasers
+core = 7.x
+package = Other
+dependencies[] = node
+dependencies[] = field
+dependencies[] = field_ui
