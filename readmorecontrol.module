@@ -22,10 +22,17 @@ function readmorecontrol_hook_info() {
     'form_field_ui_field_edit_form_alter' => array(
       'group' => 'admin',
     ),
+    'node_type_update' => array(
+      'group' => 'admin',
+    ),
+    'node_type_delete' => array(
+      'group' => 'admin',
+    ),
   );
 
   return $hooks;
 }
+
 
 /**
  * Implements hook_help().
