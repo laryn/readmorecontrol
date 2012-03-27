@@ -1,5 +1,3 @@
-# $Id$
-
 Read More Control
 
 This module adds settings to node content types, and node field instances to 
