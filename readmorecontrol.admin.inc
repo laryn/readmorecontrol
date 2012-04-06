@@ -69,7 +69,7 @@ function readmorecontrol_form_field_ui_field_edit_form_alter(&$form, &$form_stat
  */
 function readmorecontrol_node_type_update($info) {
   if (!empty($info->old_type) && $info->old_type != $info->type) {
-    $setting = variable_get('node_readmorecontrol_' . $node->type, 'always');
+    $setting = variable_get('node_readmorecontrol_' . $info->type, 'always');
     variable_del('node_readmorecontrol_' . $info->old_type);
     variable_set('node_readmorecontrol_' . $info->type, $setting);
   }
