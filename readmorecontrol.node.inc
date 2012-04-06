@@ -20,7 +20,7 @@ function readmorecontrol_field_display_alter(&$display, $context) {
     }
 
     // If node_readmorecontrol is not set to when required, just return now.
-    if ($node->node_readmorecontrol !== 'when_required') {
+    if ($node->node_readmorecontrol != 'when_required') {
       return;
     }
     // If readmore_required has already been set on the node, just return now.
@@ -34,7 +34,7 @@ function readmorecontrol_field_display_alter(&$display, $context) {
     }
     // Text fields need have their differences calculated later, but we need
     // the field instance data. So we store it on the node and return.
-    elseif ($context['field']['type'] === 'text_with_summary' || $context['field']['type'] === 'text_long') {
+    elseif ($context['field']['type'] == 'text_with_summary' || $context['field']['type'] == 'text_long') {
       $fieldname = $context['field']['field_name'];
       $node->{$fieldname}['#instance'] = $context['instance'];
       return;
@@ -44,12 +44,12 @@ function readmorecontrol_field_display_alter(&$display, $context) {
     $fulldisplay = field_get_display($context['instance'], 'full', $node);
 
     // If both the teaser and full view mode are hidden then we can ignore this.
-    if ($display['type'] === 'hidden' && $fulldisplay['type'] === 'hidden') {
+    if ($display['type'] == 'hidden' && $fulldisplay['type'] == 'hidden') {
       return;
     }
     // Otherwise we will compare the display details. If they don't match set
     // the readmore_required flag on the node.
-    elseif ($fulldisplay['type'] !== $display['type'] ||
+    elseif ($fulldisplay['type'] != $display['type'] ||
             $fulldisplay['settings'] !== $display['settings']) {
       $node->readmore_required = TRUE;
     }
@@ -70,7 +70,7 @@ function readmorecontrol_node_view($node, $view_mode, $langcode) {
 
     // If node_readmorecontrol has been set to always, (i.e. not required and
     // not never), just return now.
-    if ($node->node_readmorecontrol !== 'when_required' && $node->node_readmorecontrol !== 'never') {
+    if ($node->node_readmorecontrol != 'when_required' && $node->node_readmorecontrol != 'never') {
       return;
     }
 
