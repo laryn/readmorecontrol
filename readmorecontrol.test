@@ -1,0 +1,87 @@
+<?php
+
+/**
+ * @file
+ * Tests for readmorecontrol.module.
+ */
+
+/**
+ * Tests for number field types.
+ */
+class ReadMoreControlTestCase extends DrupalWebTestCase {
+  protected $field;
+  protected $instance;
+  protected $web_user;
+
+  public static function getInfo() {
+    return array(
+      'name'  => 'Base tests',
+      'description'  => 'Test the creation of a number of fields and the responses found when looking for the read more link on node entities.',
+      'group' => 'Read More Control'
+    );
+  }
+
+  function setUp() {
+    parent::setUp(array('field_test', 'readmorecontrol'));
+
+    $this->web_user = $this->drupalCreateUser(array(
+      'access field_test content',
+      'administer field_test content',
+      'administer content types',
+      'administer nodes',
+      'bypass node access'
+    ));
+    $this->drupalLogin($this->web_user);
+  }
+
+  /**
+   * Test that settings are saved against the node entity type and that these
+   * are updated if the content type is renamed.
+   */
+  function testNodeTypeSettings() {
+    // See if our option shows up on the edit pages.
+    $this->drupalGet('admin/structure/types/manage/page');
+    $this->assertFieldChecked('edit-node-readmorecontrol-always');
+    $this->assertNoFieldChecked('edit-node-readmorecontrol-when-required');
+    $this->assertNoFieldChecked('edit-node-readmorecontrol-never');
+
+    $edit = array('node_readmorecontrol' => 'when_required');
+    $this->drupalPost('admin/structure/types/manage/page', $edit, t('Save content type'));
+    $this->assertRaw(t('The content type %type has been updated.', array('%type' => 'Basic page')));
+    // Check that there is no strange interaction with other types
+    $this->drupalGet('admin/structure/types/manage/article');
+    $this->assertFieldChecked('edit-node-readmorecontrol-always');
+
+    $this->drupalGet('admin/structure/types/manage/page');
+    $this->assertFieldChecked('edit-node-readmorecontrol-when-required');
+
+    // Change type and test
+    $edit = array('type' => 'pp');
+    $this->drupalPost('admin/structure/types/manage/page', $edit, t('Save content type'));
+    $this->assertRaw(t('The content type %type has been updated.', array('%type' => 'Basic page')));
+
+    $this->drupalGet('admin/structure/types/manage/pp');
+    $this->assertFieldChecked('edit-node-readmorecontrol-when-required');
+    // Check that there is no strange interaction with other types
+    $this->drupalGet('admin/structure/types/manage/article');
+    $this->assertFieldChecked('edit-node-readmorecontrol-always');
+
+    $edit = array('node_readmorecontrol' => 'never');
+    $this->drupalPost('admin/structure/types/manage/pp', $edit, t('Save content type'));
+    $this->assertRaw(t('The content type %type has been updated.', array('%type' => 'Basic page')));
+
+    $this->drupalGet('admin/structure/types/manage/pp');
+    $this->assertFieldChecked('edit-node-readmorecontrol-never');
+
+    // Revert type settings and test
+    $edit = array('type' => 'page');
+    $this->drupalPost('admin/structure/types/manage/pp', $edit, t('Save content type'));
+    $this->assertRaw(t('The content type %type has been updated.', array('%type' => 'Basic page')));
+
+    $this->drupalGet('admin/structure/types/manage/page');
+    $this->assertFieldChecked('edit-node-readmorecontrol-never');
+    $this->drupalGet('admin/structure/types/manage/article');
+    $this->assertFieldChecked('edit-node-readmorecontrol-always');
+  }
+
+}
