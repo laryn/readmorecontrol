@@ -26,8 +26,10 @@ function readmorecontrol_field_display_alter(&$display, $context) {
     return;
   }
 
-  // @todo - This is the last remains of node specific behaviour here.
-  // This needs refactoring out to allow other entities and view modes.
+  /*
+   * @todo - This is the last remains of node specific behaviour here.
+   * This needs refactoring out to allow other entities and view modes.
+   */
 
   // Currently limited to node entities with the teaser view mode.
   if ($entity_type == 'node' && $view_mode == 'teaser') {
@@ -62,6 +64,12 @@ function readmorecontrol_field_display_alter(&$display, $context) {
   }
 }
 
+/**
+ * Helper function to do late processing fields.
+ *
+ * This currently only handles the text with summary/trimmed fields. And it
+ * assumes that the display in the default full view is full text.
+ */
 function readmorecontrol_post_process_fields($content, $entity_type, $entity, $view_mode, $langcode, $bundle = NULL) {
   if (!isset($bundle)) {
     list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
@@ -123,13 +131,13 @@ function readmorecontrol_node_view($node, $view_mode, $langcode) {
  *                        This is set we this can be determined from the global
  *                        settings.
  *
- * @param $entity_type
+ * @param string $entity_type
  *   The name of the entity type, (i.e. 'node', 'user', etc).
  *
- * @param $entity
+ * @param object $entity
  *   The entity object to check the read more control settings against.
  *
- * @param $bundle
+ * @param string|null $bundle
  *   Optional bundle name, (i.e. node content type), to save doing a lookup
  *   using entity_extract_ids().
  */
