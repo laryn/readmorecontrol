@@ -9,51 +9,90 @@
  * Implements hook_field_display_alter().
  */
 function readmorecontrol_field_display_alter(&$display, $context) {
-  // Only if we the entity is a node and the view mode is teaser.
-  if ($context['entity_type'] == 'node' && $context['view_mode'] == 'teaser') {
-    $node = $context['entity'];
+  extract($context, EXTR_SKIP);
+  $field_name = $field['field_name'];
 
-    // Make sure that readmorecontrol_node in the node object has been grabbed
-    // for the content type.
-    if (!isset($node->readmorecontrol_node)) {
-      $node->readmorecontrol_node = variable_get('readmorecontrol_node_' . $node->type, 'always');
+  // Initiate global setting checks.
+  readmorecontrol_set_entity_behaviour($entity_type, $entity);
+
+  // If readmore_required has been set on the entity no further calculations
+  // are needed. This could be either TRUE or FALSE.
+  if (isset($entity->readmore_required)) {
+    return;
+  }
+
+  // Terminate processing early based on the instance settings.
+  if (!empty($instance['readmorecontrol_ignore'])) {
+    return;
+  }
+
+  // @todo - This is the last remains of node specific behaviour here.
+  // This needs refactoring out to allow other entities and view modes.
+
+  // Currently limited to node entities with the teaser view mode.
+  if ($entity_type == 'node' && $view_mode == 'teaser') {
+
+    // Discover if the field is empty. This mimics _field_invoke() to pull out
+    // the $items array. (@todo determine if we can use the global $language).
+    $available_languages = field_available_languages($entity_type, $field);
+    $languages = _field_language_suggestion($available_languages, $entity->language, $field_name);
+    $items = array();
+    foreach ($languages as $langcode) {
+      $lang_items = isset($entity->{$field_name}[$langcode]) ? $entity->{$field_name}[$langcode] : array();
+      $items = array_merge($items, $lang_items);
+    }
+    $items = _field_filter_items($field, $items);
+    if (empty($items)) {
+      return;
     }
 
-    // If readmorecontrol_node is not set to when required, just return now.
-    if ($node->readmorecontrol_node != 'when_required') {
-      return;
-    }
-    // If readmore_required has already been set on the node, just return now.
-    elseif (!empty($node->readmore_required)) {
-      return;
-    }
-    // If the field has been set to be ignored for purposes of calculating
-    // whether to show the read more link, just return now.
-    elseif (!empty($context['instance']['readmorecontrol_ignore'])) {
-      return;
-    }
-    // Text fields need have their differences calculated later, but we need
-    // the field instance data. So we store it on the node and return.
-    elseif ($context['field']['type'] == 'text_with_summary' || $context['field']['type'] == 'text_long') {
-      $fieldname = $context['field']['field_name'];
-      $node->{$fieldname}['#instance'] = $context['instance'];
-      return;
-    }
+    // Text summary fields are processed latter.
+    // @todo - Fix me, this assumes full display on default view mode.
+    if ($field['type'] != 'text_with_summary' && $field['type'] != 'text_long') {
+      // Get the field display info for full view mode.
+      $fulldisplay = field_get_display($instance, 'full', $entity);
 
-    // Get the field display info for full view mode.
-    $fulldisplay = field_get_display($context['instance'], 'full', $node);
-
-    // If both the teaser and full view mode are hidden then we can ignore this.
-    if ($display['type'] == 'hidden' && $fulldisplay['type'] == 'hidden') {
-      return;
-    }
-    // Otherwise we will compare the display details. If they don't match set
-    // the readmore_required flag on the node.
-    elseif ($fulldisplay['type'] != $display['type'] ||
-            $fulldisplay['settings'] !== $display['settings']) {
-      $node->readmore_required = TRUE;
+      // If the full view mode is hidden, we can ignore this field.
+      if ($fulldisplay['type'] != 'hidden') {
+        if ($fulldisplay['type'] != $display['type'] || $fulldisplay['settings'] !== $display['settings']) {
+          $entity->readmore_required = TRUE;
+        }
+      }
     }
   }
+}
+
+function readmorecontrol_post_process_fields($content, $entity_type, $entity, $view_mode, $langcode, $bundle = NULL) {
+  if (!isset($bundle)) {
+    list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+  }
+
+  $instances = field_info_instances($entity_type, $bundle);
+  foreach ($instances as $field_name => $instance) {
+    // @todo - how does this interact with groups?
+    // @todo - how does this interact with field access?
+    $element = isset($content[$field_name]) ? $content[$field_name] : FALSE;
+    if ($element) {
+      $field = field_info_field($field_name);
+      switch ($field['type']) {
+        case 'text_with_summary':
+        case 'text_long':
+          // @todo - Fix me, this assumes full display on default view mode.
+          // See text_field_formatter_view() for the mechanics.
+          if ($element['#formatter'] == 'text_trimmed' || $element['#formatter'] == 'text_summary_or_trimmed') {
+            foreach ($element['#items'] as $delta => $item) {
+              $sanitized = _text_sanitize($instance, $langcode, $item, 'value');
+              if ($element[$delta]['#markup'] !== $sanitized) {
+                return TRUE;
+              }
+            }
+          }
+          break;
+
+      }
+    }
+  }
+  return FALSE;
 }
 
 /**
@@ -61,71 +100,54 @@ function readmorecontrol_field_display_alter(&$display, $context) {
  */
 function readmorecontrol_node_view($node, $view_mode, $langcode) {
   // Only if the view mode is for a teaser.
-  if ($view_mode == 'teaser') {
-    // Make sure that readmorecontrol_node in the node object has been grabbed
-    // for the content type.
-    if (!isset($node->readmorecontrol_node)) {
-      $node->readmorecontrol_node = variable_get('readmorecontrol_node_' . $node->type, 'always');
-    }
+  if ($view_mode == 'teaser' && isset($node->content['links']['node']['#links']['node-readmore'])) {
+    // Initiate global setting checks. This is needed if all fields are empty.
+    readmorecontrol_set_entity_behaviour('node', $node, $node->type);
 
-    // If readmorecontrol_node has been set to always, (i.e. not required and
-    // not never), just return now.
-    if ($node->readmorecontrol_node != 'when_required' && $node->readmorecontrol_node != 'never') {
-      return;
-    }
-
-    // Make sure that readmore_required in the node object has been set.
+    // Preprocessing the display may have already discovered the behaviour.
     if (!isset($node->readmore_required)) {
-      $node->readmore_required = FALSE;
+      $node->readmore_required = readmorecontrol_post_process_fields($node->content, 'node', $node, $view_mode, $langcode, $node->type);
     }
-
-    // If readmorecontrol_node is set to when required, and readmore_required
-    // isn't already set to TRUE, we need to iterate through all the renderable
-    // elements to find text fields that might have a summary or have been
-    // trimmed.
-    if ($node->readmorecontrol_node == 'when_required' && !$node->readmore_required) {
-      foreach (element_children($node->content) as $field_name) {
-        $element = $node->content[$field_name];
-
-        if (isset($element['#field_type']) && ($element['#field_type'] == 'text_with_summary' || $element['#field_type'] == 'text_long')) {
-          // If the field is set with readmorecontrol_ignore, then instance will
-          // get set in readmorecontrol_field_display_alter.
-          if (!isset($node->{$element['#field_name']}['#instance'])) {
-            continue;
-          }
-
-          // Get the instance info for the field.
-          $instance = $node->{$element['#field_name']}['#instance'];
-
-          // Need to check each item in the field to see if the content being
-          // displayed matches full view mode.
-          foreach ($element['#items'] as $delta => $item) {
-            switch ($element['#formatter']) {
-              case 'text_plain':
-              case 'text_default':
-                // These two will not cause read more to be displayed.
-                continue;
-
-              case 'text_trimmed':
-              case 'text_summary_or_trimmed':
-                $sanitized = _text_sanitize($instance, $langcode, $item, 'value');
-
-                if ($element[$delta]['#markup'] !== $sanitized) {
-                  $node->readmore_required = TRUE;
-                  break 2;
-                }
-                break;
-
-            }
-          }
-        }
-      }
-    }
-
-    // Finally if readmore_required is set to FALSE, remove the link from the
-    // nodes content array.
     if (!$node->readmore_required) {
       unset($node->content['links']['node']['#links']['node-readmore']);
     }
+  }
+}
+
+/**
+ * Helper function to predetermine the global level read more settings.
+ *
+ * This sets one or two entity properties as required.
+ *   - readmorebehaviour: The default behaviour for this entities bundle.
+ *   - readmore_required: Main control flag to show or hide the read more link.
+ *                        This is set we this can be determined from the global
+ *                        settings.
+ *
+ * @param $entity_type
+ *   The name of the entity type, (i.e. 'node', 'user', etc).
+ *
+ * @param $entity
+ *   The entity object to check the read more control settings against.
+ *
+ * @param $bundle
+ *   Optional bundle name, (i.e. node content type), to save doing a lookup
+ *   using entity_extract_ids().
+ */
+function readmorecontrol_set_entity_behaviour($entity_type, $entity, $bundle = NULL) {
+  // Determine the default read more behaviour from the entity bundle.
+  if (!isset($bundle)) {
+    list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+  }
+  if (!isset($entity->readmorebehaviour)) {
+    $entity->readmorebehaviour = variable_get('readmorecontrol_' . $entity_type . '_' . $bundle, 'always');
+  }
+  switch ($entity->readmorebehaviour) {
+    case 'always':
+      $entity->readmore_required = TRUE;
+      return;
+
+    case 'never':
+      $entity->readmore_required = FALSE;
+      return;
   }
 }
