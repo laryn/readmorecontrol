@@ -13,14 +13,14 @@ function readmorecontrol_field_display_alter(&$display, $context) {
   if ($context['entity_type'] == 'node' && $context['view_mode'] == 'teaser') {
     $node = $context['entity'];
 
-    // Make sure that node_readmorecontrol in the node object has been grabbed
+    // Make sure that readmorecontrol_node in the node object has been grabbed
     // for the content type.
-    if (!isset($node->node_readmorecontrol)) {
-      $node->node_readmorecontrol = variable_get('node_readmorecontrol_' . $node->type, 'always');
+    if (!isset($node->readmorecontrol_node)) {
+      $node->readmorecontrol_node = variable_get('readmorecontrol_node_' . $node->type, 'always');
     }
 
-    // If node_readmorecontrol is not set to when required, just return now.
-    if ($node->node_readmorecontrol != 'when_required') {
+    // If readmorecontrol_node is not set to when required, just return now.
+    if ($node->readmorecontrol_node != 'when_required') {
       return;
     }
     // If readmore_required has already been set on the node, just return now.
@@ -62,15 +62,15 @@ function readmorecontrol_field_display_alter(&$display, $context) {
 function readmorecontrol_node_view($node, $view_mode, $langcode) {
   // Only if the view mode is for a teaser.
   if ($view_mode == 'teaser') {
-    // Make sure that node_readmorecontrol in the node object has been grabbed
+    // Make sure that readmorecontrol_node in the node object has been grabbed
     // for the content type.
-    if (!isset($node->node_readmorecontrol)) {
-      $node->node_readmorecontrol = variable_get('node_readmorecontrol_' . $node->type, 'always');
+    if (!isset($node->readmorecontrol_node)) {
+      $node->readmorecontrol_node = variable_get('readmorecontrol_node_' . $node->type, 'always');
     }
 
-    // If node_readmorecontrol has been set to always, (i.e. not required and
+    // If readmorecontrol_node has been set to always, (i.e. not required and
     // not never), just return now.
-    if ($node->node_readmorecontrol != 'when_required' && $node->node_readmorecontrol != 'never') {
+    if ($node->readmorecontrol_node != 'when_required' && $node->readmorecontrol_node != 'never') {
       return;
     }
 
@@ -79,11 +79,11 @@ function readmorecontrol_node_view($node, $view_mode, $langcode) {
       $node->readmore_required = FALSE;
     }
 
-    // If node_readmorecontrol is set to when required, and readmore_required
+    // If readmorecontrol_node is set to when required, and readmore_required
     // isn't already set to TRUE, we need to iterate through all the renderable
     // elements to find text fields that might have a summary or have been
     // trimmed.
-    if ($node->node_readmorecontrol == 'when_required' && !$node->readmore_required) {
+    if ($node->readmorecontrol_node == 'when_required' && !$node->readmore_required) {
       foreach (element_children($node->content) as $field_name) {
         $element = $node->content[$field_name];
 

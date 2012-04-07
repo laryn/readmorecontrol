@@ -11,7 +11,7 @@
 function readmorecontrol_form_node_type_form_alter(&$form, &$form_state, $form_id) {
   $type = $form['#node_type'];
 
-  // Add node_readmorecontrol setting to node_type_form to control the
+  // Add readmorecontrol_node setting to node_type_form to control the
   // circumstances when the Read More link should be displayed.
   $form['readmorecontrol'] = array(
     '#type' => 'fieldset',
@@ -24,10 +24,10 @@ function readmorecontrol_form_node_type_form_alter(&$form, &$form_state, $form_i
 
   // The actual setting itself. Nodes module automatically saves it as a
   // variable in the database.
-  $form['readmorecontrol']['node_readmorecontrol'] = array(
+  $form['readmorecontrol']['readmorecontrol_node'] = array(
     '#type' => 'radios',
     '#title' => t('Display Read More'),
-    '#default_value' => variable_get('node_readmorecontrol_' . $type->type, 'always'),
+    '#default_value' => variable_get('readmorecontrol_node_' . $type->type, 'always'),
     '#options' => array(
       'always' => t('Always'),
       'when_required' => t('When Required'),
@@ -69,9 +69,9 @@ function readmorecontrol_form_field_ui_field_edit_form_alter(&$form, &$form_stat
  */
 function readmorecontrol_node_type_update($info) {
   if (!empty($info->old_type) && $info->old_type != $info->type) {
-    $setting = variable_get('node_readmorecontrol_' . $info->type, 'always');
-    variable_del('node_readmorecontrol_' . $info->old_type);
-    variable_set('node_readmorecontrol_' . $info->type, $setting);
+    $setting = variable_get('readmorecontrol_node_' . $info->type, 'always');
+    variable_del('readmorecontrol_node_' . $info->old_type);
+    variable_set('readmorecontrol_node_' . $info->type, $setting);
   }
 }
 
@@ -79,5 +79,5 @@ function readmorecontrol_node_type_update($info) {
  * Implements hook_node_type_delete().
  */
 function readmorecontrol_node_type_delete($info) {
-  variable_del('node_readmorecontrol_' . $info->type);
+  variable_del('readmorecontrol_node_' . $info->type);
 }

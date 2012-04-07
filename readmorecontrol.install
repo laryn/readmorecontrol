@@ -9,10 +9,10 @@
  * Implements hook_uninstall().
  */
 function readmorecontrol_uninstall() {
-  // Delete the node_readmorecontrol_ variables set on the node types.
+  // Delete the 'readmorecontrol_node_%' variables set on the node types.
   $types = node_type_get_types();
   foreach ($types as $key => $type) {
-    variable_del('node_readmorecontrol_' . $key);
+    variable_del('readmorecontrol_node_' . $key);
   }
 
   // Now delete the readmore_ignore values from node field instances.
@@ -26,3 +26,21 @@ function readmorecontrol_uninstall() {
     }
   }
 }
+
+/**
+ * Update the naming of internal variables.
+ *
+ * Changes include:
+ *   Renames 'node_readmorecontrol_[type]' to 'readmorecontrol_node_[type]'.
+ *   ....
+ */
+function readmorecontrol_update_7000() {
+  foreach (node_type_get_types() as $key => $type) {
+    // Only update if it is set so that the defaults still work.
+    if ($value = variable_get('node_readmorecontrol_' . $key, FALSE)) {
+      variable_set('readmorecontrol_node_' . $key, $value);
+      variable_del('node_readmorecontrol_' . $key);
+    }
+  }
+}
+
