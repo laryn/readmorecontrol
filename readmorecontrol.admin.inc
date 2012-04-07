@@ -87,6 +87,9 @@ function readmorecontrol_form_field_ui_field_edit_form_alter(&$form, &$form_stat
   }
 }
 
+/**
+ * Helper function to explain how the current instance setting would be used.
+ */
 function readmorecontrol_field_readmore_settings($field, $instance) {
   $bundle = $instance['bundle'];
   $entity_type = $instance['entity_type'];
@@ -98,7 +101,7 @@ function readmorecontrol_field_readmore_settings($field, $instance) {
   $t_args = array(
     '%field' => $instance['label'],
     '%display_read_more' => t('Display Read More'),
-    '%entity_label' => $entity_info['label']
+    '%entity_label' => $entity_info['label'],
   );
 
   if ($bundle_default == 'default') {
@@ -146,10 +149,6 @@ function readmorecontrol_field_readmore_settings($field, $instance) {
   }
   $output .= '<br/>' . t('This behaviour, %behaviour, is set using the %entity_label types !settings_source %display_read_more settings.', $t_args);
   return $output;
-  return t('This determines how the %field field interacts with the read more control module when the %display_read_more setting for %type is set to %when_required.',
-    array(
-      '%field' => $instance['label'],
-    ));
 }
 
 /**

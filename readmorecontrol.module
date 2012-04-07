@@ -49,7 +49,7 @@ function readmorecontrol_help($path, $arg) {
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function readmorecontrol_menu() {
   $items['admin/config/content/read-more-control'] = array(

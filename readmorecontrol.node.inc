@@ -147,9 +147,9 @@ function readmorecontrol_post_process_fields($content, $entity_type, $entity, $v
                 }
               }
             }
-            break;
+          }
+          break;
 
-        }
       }
     }
   }
