@@ -47,3 +47,18 @@ function readmorecontrol_help($path, $arg) {
       return $output;
   }
 }
+
+/**
+ * Implementation of hook_menu().
+ */
+function readmorecontrol_menu() {
+  $items['admin/config/content/read-more-control'] = array(
+    'title' => 'Read more settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('readmorecontrol_admin_settings_form'),
+    'description' => 'Configure the Read more link settings.',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'readmorecontrol.admin.inc',
+  );
+  return $items;
+}

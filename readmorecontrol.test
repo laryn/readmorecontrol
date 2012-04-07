@@ -49,7 +49,7 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
   function testNodeTypeSettings() {
     // See if our option shows up on the edit pages.
     $this->drupalGet('admin/structure/types/manage/page');
-    $this->assertFieldChecked('edit-readmorecontrol-node-always');
+    $this->assertFieldChecked('edit-readmorecontrol-node-default');
     $this->assertNoFieldChecked('edit-readmorecontrol-node-when-required');
     $this->assertNoFieldChecked('edit-readmorecontrol-node-never');
 
@@ -58,7 +58,7 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->assertRaw(t('The content type %type has been updated.', array('%type' => 'Basic page')));
     // Check that there is no strange interaction with other types.
     $this->drupalGet('admin/structure/types/manage/article');
-    $this->assertFieldChecked('edit-readmorecontrol-node-always');
+    $this->assertFieldChecked('edit-readmorecontrol-node-default');
 
     $this->drupalGet('admin/structure/types/manage/page');
     $this->assertFieldChecked('edit-readmorecontrol-node-when-required');
@@ -72,7 +72,7 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->assertFieldChecked('edit-readmorecontrol-node-when-required');
     // Check that there is no strange interaction with other types.
     $this->drupalGet('admin/structure/types/manage/article');
-    $this->assertFieldChecked('edit-readmorecontrol-node-always');
+    $this->assertFieldChecked('edit-readmorecontrol-node-default');
 
     $edit = array('readmorecontrol_node' => 'never');
     $this->drupalPost('admin/structure/types/manage/pp', $edit, t('Save content type'));
@@ -89,7 +89,7 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->drupalGet('admin/structure/types/manage/page');
     $this->assertFieldChecked('edit-readmorecontrol-node-never');
     $this->drupalGet('admin/structure/types/manage/article');
-    $this->assertFieldChecked('edit-readmorecontrol-node-always');
+    $this->assertFieldChecked('edit-readmorecontrol-node-default');
   }
 
   /**

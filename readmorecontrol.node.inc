@@ -22,7 +22,7 @@ function readmorecontrol_field_display_alter(&$display, $context) {
   }
 
   // Terminate processing early based on the instance settings.
-  if (!empty($instance['readmorecontrol_ignore'])) {
+  if (!readmorecontrol_field_requires_processing($entity, $field, $instance)) {
     return;
   }
 
@@ -65,6 +65,57 @@ function readmorecontrol_field_display_alter(&$display, $context) {
 }
 
 /**
+ * A helper function to help determine if a field should be tested.
+ *
+ * If you select "Show link when required by the Body (body) field" and set the
+ * field to be ignored in the instance settings,
+ */
+function readmorecontrol_field_requires_processing($entity, $field, $instance) {
+  // Test the default action to determine if we should use this field.
+  switch ($entity->readmorebehaviour) {
+    case 'when_required':
+      // Check the field settings to see if this field is to be ignored.
+      if ($behaviour = readmorecontrol_instance_settings($instance)) {
+        return $behaviour == 'process';
+      }
+      return TRUE;
+
+    case 'when_required_text':
+      if (in_array($field['type'], array('text_with_summary', 'text_long'))) {
+        if ($behaviour = readmorecontrol_instance_settings($instance)) {
+          return $behaviour == 'process';
+        }
+        return TRUE;
+      }
+      return FALSE;
+
+    case 'when_required_body':
+      if ($field['field_name'] == 'body') {
+        if ($behaviour = readmorecontrol_instance_settings($instance)) {
+          return $behaviour == 'process';
+        }
+        return TRUE;
+      }
+      return FALSE;
+
+  }
+  return FALSE;
+}
+
+/**
+ * Helper function to determine the instance readmore_behaviour setting.
+ */
+function readmorecontrol_instance_settings($instance) {
+  // Check the field settings to see if this field is to be ignored.
+  if (isset($instance['readmore_behaviour'])) {
+    if ($instance['readmore_behaviour'] != 'default') {
+      return $instance['readmore_behaviour'];
+    }
+  }
+  return FALSE;
+}
+
+/**
  * Helper function to do late processing fields.
  *
  * This currently only handles the text with summary/trimmed fields. And it
@@ -85,18 +136,20 @@ function readmorecontrol_post_process_fields($content, $entity_type, $entity, $v
       switch ($field['type']) {
         case 'text_with_summary':
         case 'text_long':
-          // @todo - Fix me, this assumes full display on default view mode.
-          // See text_field_formatter_view() for the mechanics.
-          if ($element['#formatter'] == 'text_trimmed' || $element['#formatter'] == 'text_summary_or_trimmed') {
-            foreach ($element['#items'] as $delta => $item) {
-              $sanitized = _text_sanitize($instance, $langcode, $item, 'value');
-              if ($element[$delta]['#markup'] !== $sanitized) {
-                return TRUE;
+          if (readmorecontrol_field_requires_processing($entity, $field, $instance)) {
+            // @todo - Fix me, this assumes full display on default view mode.
+            // See text_field_formatter_view() for the mechanics.
+            if ($element['#formatter'] == 'text_trimmed' || $element['#formatter'] == 'text_summary_or_trimmed') {
+              foreach ($element['#items'] as $delta => $item) {
+                $sanitized = _text_sanitize($instance, $langcode, $item, 'value');
+                if ($element[$delta]['#markup'] !== $sanitized) {
+                  return TRUE;
+                }
               }
             }
-          }
-          break;
+            break;
 
+        }
       }
     }
   }
@@ -147,8 +200,14 @@ function readmorecontrol_set_entity_behaviour($entity_type, $entity, $bundle = N
     list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
   }
   if (!isset($entity->readmorebehaviour)) {
-    $entity->readmorebehaviour = variable_get('readmorecontrol_' . $entity_type . '_' . $bundle, 'always');
+    $system_default = $entity_type == 'node' ? 'always' : 'never';
+    $entity_default = variable_get("readmorecontrol_default_{$entity_type}_behaviour", $system_default);
+    $entity->readmorebehaviour = variable_get("readmorecontrol_{$entity_type}_{$bundle}", $entity_default);
+    if ($entity->readmorebehaviour == 'default') {
+      $entity->readmorebehaviour = $entity_default;
+    }
   }
+
   switch ($entity->readmorebehaviour) {
     case 'always':
       $entity->readmore_required = TRUE;
