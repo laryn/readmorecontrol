@@ -13,6 +13,9 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
   protected $instance;
   protected $webUser;
 
+  /**
+   * Implements DrupalWebTestCase::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name'  => 'Base tests',
@@ -21,6 +24,11 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     );
   }
 
+  /**
+   * Implements DrupalWebTestCase::setUp().
+   *
+   * @see DrupalWebTestCase::setUp()
+   */
   function setUp() {
     parent::setUp(array('field_test', 'readmorecontrol'));
 
