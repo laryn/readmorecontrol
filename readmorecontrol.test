@@ -11,7 +11,7 @@
 class ReadMoreControlTestCase extends DrupalWebTestCase {
   protected $field;
   protected $instance;
-  protected $web_user;
+  protected $webUser;
 
   public static function getInfo() {
     return array(
@@ -24,14 +24,14 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
   function setUp() {
     parent::setUp(array('field_test', 'readmorecontrol'));
 
-    $this->web_user = $this->drupalCreateUser(array(
+    $this->webUser = $this->drupalCreateUser(array(
       'access field_test content',
       'administer field_test content',
       'administer content types',
       'administer nodes',
       'bypass node access',
     ));
-    $this->drupalLogin($this->web_user);
+    $this->drupalLogin($this->webUser);
   }
 
   /**
@@ -99,7 +99,6 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
    *   - options: A list field. (@todo)
    */
   function testNodeEntities() {
-
     // Add the third content type 'test'.
     $this->drupalGet('admin/structure/types/add');
     $edit = array('name' => 'Test', 'type' => 'test');
@@ -129,7 +128,6 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->addNumberIntegerField('node', 'test');
 
     // Normalise the defaults formatter settings to be equal.
-
     // Update all teaser displays to have the same settings as the full display.
     $edit = array(
       'fields[body][type]' => 'text_default',
@@ -145,7 +143,7 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
       'fields[body][type]' => 'text_default',
       'fields[field_number][type]' => 'number_integer',
       'fields[field_tags][type]' => 'taxonomy_term_reference_link',
-      'fields[field_image][type]' => 'hidden'
+      'fields[field_image][type]' => 'hidden',
     );
     $this->drupalPost('admin/structure/types/manage/article/display', $edit, t('Save'));
     $this->drupalPost('admin/structure/types/manage/article/display/teaser', $edit, t('Save'));
@@ -169,10 +167,10 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->assertText($node_article->title);
     $this->assertText($node_test->title);
 
-    $this->assertRaw($page_more_link); // Always should
-    $this->assertNoRaw($article_more_link); // Never should.
+    $this->assertRaw($page_more_link);
+    $this->assertNoRaw($article_more_link);
     // The empty fields should never trigger a read more link.
-    $this->assertNoRaw($test_more_link); // Conditional.
+    $this->assertNoRaw($test_more_link);
 
     // Create a large text chunk.
     $text = $this->randomName(10000);
@@ -188,11 +186,11 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->assertText($node_article->title);
     $this->assertText($node_test->title);
 
-    $this->assertRaw($page_more_link); // Always should.
-    $this->assertNoRaw($article_more_link); // Never should.
+    $this->assertRaw($page_more_link);
+    $this->assertNoRaw($article_more_link);
     // The body field shouldn't trigger a read more link as the displays are
     // now the same.
-    $this->assertNoRaw($test_more_link); // Conditional.
+    $this->assertNoRaw($test_more_link);
 
 
     // Update all teaser displays to show reduced size, 600 by default.
@@ -206,9 +204,9 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->assertText($node_page->title);
     $this->assertText($node_article->title);
     $this->assertText($node_test->title);
-    $this->assertRaw($page_more_link); // Always should.
-    $this->assertNoRaw($article_more_link); // Never should.
-    $this->assertRaw($test_more_link); // Conditional.
+    $this->assertRaw($page_more_link);
+    $this->assertNoRaw($article_more_link);
+    $this->assertRaw($test_more_link);
 
     // Short text should not trigger it.
     $text = $this->randomName(10);
@@ -220,11 +218,11 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     node_save($node_test);
 
     $this->drupalGet('node');
-    $this->assertRaw($page_more_link); // Always should.
-    $this->assertNoRaw($article_more_link); // Never should.
-    $this->assertNoRaw($test_more_link); // Conditional.
+    $this->assertRaw($page_more_link);
+    $this->assertNoRaw($article_more_link);
+    $this->assertNoRaw($test_more_link);
 
-    // Set an integer value
+    // Set an integer value.
     $node_page->field_number[$langcode][0]['value'] = 123;
     $node_page->body[$langcode][0]['value'] = '';
     node_save($node_page);
@@ -236,9 +234,9 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     node_save($node_test);
 
     $this->drupalGet('node');
-    $this->assertRaw($page_more_link); // Always should.
-    $this->assertNoRaw($article_more_link); // Never should.
-    $this->assertNoRaw($test_more_link); // Conditional.
+    $this->assertRaw($page_more_link);
+    $this->assertNoRaw($article_more_link);
+    $this->assertNoRaw($test_more_link);
 
     // Update all teaser displays to have the same settings as the full display.
     $edit = array(
@@ -249,9 +247,9 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->drupalPost('admin/structure/types/manage/article/display/teaser', $edit, t('Save'));
 
     $this->drupalGet('node');
-    $this->assertRaw($page_more_link); // Always should.
-    $this->assertNoRaw($article_more_link); // Never should.
-    $this->assertRaw($test_more_link); // Conditional.
+    $this->assertRaw($page_more_link);
+    $this->assertNoRaw($article_more_link);
+    $this->assertRaw($test_more_link);
 
     // A different display will trigger a read-more link.
     $edit = array(
@@ -262,9 +260,9 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->drupalPost('admin/structure/types/manage/article/display/teaser', $edit, t('Save'));
 
     $this->drupalGet('node');
-    $this->assertRaw($page_more_link); // Always should.
-    $this->assertNoRaw($article_more_link); // Never should.
-    $this->assertRaw($test_more_link); // Conditional.
+    $this->assertRaw($page_more_link);
+    $this->assertNoRaw($article_more_link);
+    $this->assertRaw($test_more_link);
 
     // The same display will not trigger a read-more link.
     $edit = array(
@@ -272,8 +270,8 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     );
     $this->drupalPost('admin/structure/types/manage/article/display/teaser', $edit, t('Save'));
     $this->drupalGet('node');
-    $this->assertRaw($test_more_link); // Conditional.
-
+     // Conditional.
+    $this->assertRaw($test_more_link);
   }
 
   /**
@@ -314,6 +312,9 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     }
   }
 
+  /**
+   * Helper method to set a node field display.
+   */
   function setNodeFieldDisplay($entity_type, $field_name, $display) {
     $this->drupalGet("admin/structure/types/manage/$entity_type/display");
     $edit = array(
@@ -322,6 +323,9 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     $this->drupalPost(NULL, $edit, t('Save'));
   }
 
+  /**
+   * Helper method to create a new node.
+   */
   function createNode($bundle, $edit = array()) {
     $edit['title'] = $this->randomName(8);
     $this->drupalPost("node/add/$bundle", $edit, t('Save'));
@@ -330,6 +334,9 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
     return $this->drupalGetNodeByTitle($edit['title']);
   }
 
+  /**
+   * Helper method to load a node from a title.
+   */
   function drupalGetNodeByTitle($title, $reset = FALSE) {
     // Load the first node returned from the database.
     $nodes = node_load_multiple(array(), array('title' => $title), $reset);
