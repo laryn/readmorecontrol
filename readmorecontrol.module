@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Defines options to control how the Read More link is displayed on teasers.
+ * Defines options to control how the Read more link is displayed on teasers.
  */
 
 /**
@@ -42,8 +42,7 @@ function readmorecontrol_help($path, $arg) {
     case 'admin/help#readmorecontrol':
       $output = '';
       $output .= '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('The Read More Control module adds settings to node content types, and node field instances to control when the %readmore link is displayed in a teaser.</p>',
-        array('%readmore' => t('Read More')));
+      $output .= '<p>' . t('The Read More Control module adds settings to node content types, and node field instances to control when the "Read more" link is displayed in a teaser.') . '</p>';
       return $output;
   }
 }

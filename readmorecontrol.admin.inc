@@ -35,11 +35,11 @@ function readmorecontrol_form_node_type_form_alter(&$form, &$form_state, $form_i
   $type = $form['#node_type'];
 
   // Add readmorecontrol_node setting to node_type_form to control the
-  // circumstances when the Read More link should be displayed.
+  // circumstances when the Read more link should be displayed.
   $form['readmorecontrol'] = array(
     '#type' => 'fieldset',
     '#title' => t('Read More Settings'),
-    '#descriptions' => t('Settings to control when Read More is displayed.'),
+    '#descriptions' => t('Settings to control when Read more link is displayed.'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#group' => 'additional_settings',

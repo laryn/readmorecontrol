@@ -19,7 +19,7 @@ class ReadMoreControlTestCase extends DrupalWebTestCase {
   public static function getInfo() {
     return array(
       'name'  => 'Base tests',
-      'description'  => 'Test the creation of a number of fields and the responses found when looking for the read more link on node entities.',
+      'description'  => 'Test the creation of a number of fields and the responses found when looking for the Read more link on node entities.',
       'group' => 'Read More Control',
     );
   }
