@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains hooks defined in readmorecontrol_hook_info().
+ * Contains form alter callback bodies.
  */
 
 /**
@@ -31,7 +31,7 @@ function readmorecontrol_admin_settings_form($form, &$form_state) {
 /**
  * Implements hook_form_FORM_ID_alter().
  */
-function readmorecontrol_form_node_type_form_alter(&$form, &$form_state, $form_id) {
+function _readmorecontrol_form_node_type_form_alter(&$form, &$form_state, $form_id) {
   $type = $form['#node_type'];
 
   // Add readmorecontrol_node setting to node_type_form to control the
@@ -65,7 +65,7 @@ function readmorecontrol_form_node_type_form_alter(&$form, &$form_state, $form_i
 /**
  * Implements hook_form_FORM_ID_alter().
  */
-function readmorecontrol_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+function _readmorecontrol_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
   // Add readmore_behaviour flag to field_ui_field_edit_form to set fields
   // specific behaviour on the read more link (if applicable).
   $instance = $form['#instance'];
@@ -149,22 +149,4 @@ function readmorecontrol_field_readmore_settings($field, $instance) {
   }
   $output .= '<br/>' . t('This behaviour, %behaviour, is set using the %entity_label types !settings_source %display_read_more settings.', $t_args);
   return $output;
-}
-
-/**
- * Implements hook_node_type_update().
- */
-function readmorecontrol_node_type_update($info) {
-  if (!empty($info->old_type) && $info->old_type != $info->type) {
-    $setting = variable_get('readmorecontrol_node_' . $info->type, 'always');
-    variable_del('readmorecontrol_node_' . $info->old_type);
-    variable_set('readmorecontrol_node_' . $info->type, $setting);
-  }
-}
-
-/**
- * Implements hook_node_type_delete().
- */
-function readmorecontrol_node_type_delete($info) {
-  variable_del('readmorecontrol_node_' . $info->type);
 }
