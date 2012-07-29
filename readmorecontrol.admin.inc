@@ -194,7 +194,6 @@ function _readmorecontrol_form_field_ui_field_edit_form_alter(&$form, &$form_sta
     $form['instance']['readmore_behaviour'] = array(
       '#type' => 'radios',
       '#title' => t('Read More Behaviour'),
-      '#description' => readmorecontrol_field_readmore_settings($field, $instance),
       '#default_value' => empty($instance['readmore_behaviour']) ? 'default' : $instance['readmore_behaviour'],
       '#options' => array(
         'default' => t('Use the default behaviour'),
@@ -203,70 +202,95 @@ function _readmorecontrol_form_field_ui_field_edit_form_alter(&$form, &$form_sta
       ),
       '#weight' => -9,
     );
+
+    $usage_desc = array();
+    $info = entity_get_info($entity_type);
+    $usage_desc[] = t('Display @view_mode: !usage', array(
+      '@view_mode' => t('Default'),
+      '!usage' => readmorecontrol_field_readmore_settings($field, $instance),
+    ));
+    $excluded = readmorecontrol_excluded_view_modes();
+    $excluded[] = 'full';
+    foreach($info['view modes'] as $view_mode => $view_mode_info) {
+      if (!in_array($view_mode, $excluded)) {
+        $usage_desc[] = t('Display @view_mode: !usage', array(
+          '@view_mode' => $view_mode_info['label'],
+          '!usage' => readmorecontrol_field_readmore_settings($field, $instance, $view_mode),
+        ));
+      }
+
+    }
+    $form['instance']['readmore_behaviour']['#description']= implode('<br/>', $usage_desc);
   }
 }
 
 /**
  * Helper function to explain how the current instance setting would be used.
  */
-function readmorecontrol_field_readmore_settings($field, $instance) {
+function readmorecontrol_field_readmore_settings($field, $instance, $view_mode = 0) {
   $bundle = $instance['bundle'];
   $entity_type = $instance['entity_type'];
 
   $system_default = $entity_type == 'node' ? 'always' : 'never';
   $entity_default = variable_get('readmorecontrol_behaviour__' . $entity_type, $system_default);
   $bundle_default = variable_get("readmorecontrol_behaviour__{$entity_type}__{$bundle}", $entity_default);
-  $entity_info = entity_get_info($entity_type);
-  $t_args = array(
-    '%field' => $instance['label'],
-    '%display_read_more' => t('Display Read More'),
-    '%entity_label' => $entity_info['label'],
-  );
 
-  if ($bundle_default == 'default') {
-    $actual_behaviour = $entity_default;
-    $t_args['!settings_source'] = t('default');
+  $t_args = array();
+  if ($view_mode) {
+    $view_default = variable_get("readmorecontrol_behaviour__{$entity_type}__{$bundle}__{$view_mode}", $bundle_default);
+    if ($view_default != 'default') {
+      $actual_behaviour = $view_default;
+      $t_args['!settings_source'] = t('display');
+    }
+    elseif ($bundle_default != 'default') {
+      $actual_behaviour = $bundle_default;
+      $t_args['!settings_source'] = t('default display');
+    }
+    else {
+      $actual_behaviour = $entity_default;
+      $t_args['!settings_source'] = t('entity');
+    }
   }
   else {
-    $actual_behaviour = $bundle_default;
-    $bundle_info = field_info_bundles($entity_type);
-    $t_args['!settings_source'] = t('@bundle', array('@bundle' => $bundle_info[$bundle]['label']));
+    if ($bundle_default != 'default') {
+      $actual_behaviour = $bundle_default;
+      $t_args['!settings_source'] = t('default display');
+    }
+    else {
+      $actual_behaviour = $entity_default;
+      $t_args['!settings_source'] = t('entity');
+    }
   }
 
   $output = '';
   switch ($actual_behaviour) {
     case 'always':
-      $t_args['%behaviour'] = t('always show the Read more link');
-      $used = FALSE;
+      $t_args['%behaviour'] = t('always show');
       break;
 
     case 'when_required':
-      $t_args['%behaviour'] = t('conditionally show the Read more link based on any field');
-      $used = TRUE;
+      $t_args['%behaviour'] = t('conditionally show based on any field');
       break;
 
     case 'when_required_text':
-      $t_args['%behaviour'] = t('conditionally show the Read more link based on any text fields');
-      $used = in_array($field['type'], array('text_with_summary', 'text_long'));
+      $t_args['%behaviour'] = t('conditionally show based on any text fields');
       break;
 
     case 'when_required_body':
-      $t_args['%behaviour'] = t('conditionally show the Read more link based on the body field');
-      $used = $field['field_name'] == 'body';
+      $t_args['%behaviour'] = t('conditionally show based on the body field');
       break;
 
     case 'never':
-      $t_args['%behaviour'] = t('never show the Read more link');
-      $used = FALSE;
+      $t_args['%behaviour'] = t('never show link');
       break;
+
+    case 'none':
+      $t_args['%behaviour'] = t('disabled');
+      break;
+
   }
-  if ($used) {
-    $output .= t('This setting is currently being used.');
-  }
-  else {
-    $output .= t('This setting is currently <strong>not used</strong>.');
-  }
-  $output .= '<br/>' . t('This behaviour, %behaviour, is set using the %entity_label types !settings_source %display_read_more settings.', $t_args);
+
+  $output .= ' ' . t('set to "%behaviour" using <strong>!settings_source</strong> settings.', $t_args);
   return $output;
 }
 

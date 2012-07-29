@@ -504,7 +504,6 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
     }
   }
 
-  $attributes['class'] = implode(' ', $attributes['class']);
   if (!empty($format['rel'])) {
     if ($rel_title = _rmc_token_replace($format['rel'], $entity_type, $entity)) {
       $attributes['rel'] = $rel_title;
