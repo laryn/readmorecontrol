@@ -51,7 +51,7 @@ function readmorecontrol_formatting_settings_form($entity_type, $entity_info, $s
     '#title' => t('Enable custom link processing'),
     '#default_value' => $settings['enabled'],
     '#options' => array(
-      'global' => t('Use global settings'),
+      'global' => t('Inherit default format settings'),
       'none' => t('Do not modify'),
       'custom' => t('Custom settings'),
     ),
@@ -108,6 +108,8 @@ function readmorecontrol_formatting_settings_form($entity_type, $entity_info, $s
     '#title' =>  t('Link title (hover) text'),
     '#default_value' => $settings['title'],
     '#states' => $states,
+    '#field_prefix' => 'title = "',
+    '#field_suffix' => '"',
     '#attributes' => array('class' => array('readmorecontrol')),
   );
   $subform['class'] = array(
@@ -150,7 +152,7 @@ function readmorecontrol_formatting_settings_form($entity_type, $entity_info, $s
       'body_append'  => t('Append on new line after body field'),
       'text_inline'  => t('Inline on final long text field'),
       'text_append'  => t('Append on new line after final long text field'),
-      'field_inline'  => t('Inline on new line after final field'),
+      'field_inline'  => t('Inline on final field'),
       'field_append'  => t('Append on new line after final field'),
       'append'  => t('Append on new line after final field or addition field'),
     ),
