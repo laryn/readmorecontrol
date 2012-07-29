@@ -17,6 +17,7 @@ function readmorecontrol_uninstall() {
     ->execute();
 
   variable_del('readmorecontrol_disabled_view_modes');
+  variable_del('readmodecontrol_external_view_modes');
 
   // Now delete the readmore_behaviour values from node field instances.
 

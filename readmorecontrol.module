@@ -19,6 +19,22 @@ function readmorecontrol_help($path, $arg) {
 }
 
 /**
+ * Implements hook_theme().
+ */
+function readmorecontrol_theme($existing, $type, $theme, $path) {
+  return array(
+    'readmorecontrol_link' => array(
+      'variables' => array(
+        'entity_type' => NULL,
+        'entity' => NULL,
+        'bundle' => NULL,
+        'link' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
  * Implements hook_menu().
  */
 function readmorecontrol_menu() {
@@ -61,7 +77,6 @@ function readmorecontrol_menu() {
  * Implements hook_node_type_update().
  */
 function readmorecontrol_node_type_update($info) {
-  // @todo: Update for new view modes.
   if (!empty($info->old_type) && $info->old_type != $info->type) {
     $setting = variable_get('readmorecontrol_behaviour__node__' . $info->type, 'always');
     variable_del('readmorecontrol_behaviour__node__' . $info->old_type);
@@ -76,7 +91,6 @@ function readmorecontrol_node_type_update($info) {
  * Implements hook_node_type_delete().
  */
 function readmorecontrol_node_type_delete($info) {
-  // @todo: Update for new view modes.
   variable_del('readmorecontrol_behaviour__node__' . $info->type);
   variable_del('readmorecontrol_format__node__' . $info->type);
 }
@@ -113,10 +127,23 @@ function readmorecontrol_preprocess_search_result(&$variables) {
   if (isset($variables['result'][$type]) && readmorecontrol_supported_entity($type)) {
     $entity = $variables['result'][$type];
     if (is_object($entity) && !empty($entity->readmorelink)) {
-      // Currently either just T/F.
       if ($entity->readmore_required) {
-        $elm = empty($entity->readmorelink_inline) ? 'div' : 'span';
-        $variables['snippet'] .= " <{$elm} class=\"read-more-wrapper\">" . $entity->readmorelink . "</{$elm}>";
+        switch ($entity->readmorelink_placement) {
+          case 'search_info':
+            $variables['info_split'][] = $entity->readmorelink;
+            if (empty($variables['info'])) {
+              $variables['info'] = $entity->readmorelink;
+            }
+            else {
+              $variables['info'] .= ' - ' . $entity->readmorelink;
+            }
+            break;
+
+          default:
+            $elm = strpos($entity->readmorelink_placement, '_inline') ? 'span' : 'div';
+            $variables['snippet'] .= " <{$elm} class=\"read-more-link\">" . $entity->readmorelink . "</{$elm}>";
+            break;
+        }
       }
     }
   }
@@ -125,6 +152,19 @@ function readmorecontrol_preprocess_search_result(&$variables) {
 ################################################################################
 #  Helper functions for parsing various settings and options.                  #
 ################################################################################
+
+/**
+ * Helper function to get a list of view modes that should not have a Read more
+ * link applied to these.
+ */
+function readmorecontrol_excluded_view_modes() {
+  return array(
+    'search_index',
+    'token',
+    'diff_standard',
+    'diff_complete',
+  );
+}
 
 /**
  * Determines if the entity can support a Read more link.
@@ -136,7 +176,7 @@ function readmorecontrol_supported_entity($entity_type, $info = NULL) {
   if ((!empty($info['label callback']) || !empty($info['entity keys']['label']))
       && !empty($info['uri callback'])) {
     if (!empty($info['view modes'])) {
-      $excluded_modes = variable_get('readmorecontrol_disabled_view_modes', array('search_index', 'token'));
+      $excluded_modes = variable_get('readmorecontrol_disabled_view_modes', readmorecontrol_excluded_view_modes());
       $excluded_modes[] = 'default';
       $excluded_modes[] = 'full';
       $modes = array_keys($info['view modes']);
@@ -151,8 +191,10 @@ function readmorecontrol_supported_entity($entity_type, $info = NULL) {
  * Helper function to determine the Read more link behaviour.
  */
 function readmorecontrol_entity_behaviour($entity_type, $bundle, $view_mode) {
-  if ($view_mode == 'search_index') {
-    return 'never';
+  // This blocks all processing within entity_view().
+  if (in_array($view_mode, readmorecontrol_excluded_view_modes())) {
+    // Defaulting to none rather than never to prevent any additional processing.
+    return 'none';
   }
   else {
     $behaviour = variable_get("readmorecontrol_behaviour__{$entity_type}__{$bundle}__{$view_mode}", 'default');
@@ -180,14 +222,18 @@ function readmorecontrol_format_settings($entity_type, $bundle = NULL, $view_mod
         $settings = array();
       }
     }
-    $settings += variable_get('readmorecontrol_format__' . $entity_type . '__' . $bundle, array('enabled' => 'global'));
-    // Reset settings if global flag is selected.
-    if (!$is_edit && $settings['enabled'] == 'global') {
-      $settings = array();
+    if (!$is_edit) {
+      $settings += variable_get('readmorecontrol_format__' . $entity_type . '__' . $bundle, array('enabled' => 'global'));
+      // Reset settings if global flag is selected.
+      if ($settings['enabled'] == 'global') {
+        $settings = array();
+      }
     }
   }
-  $settings += variable_get('readmorecontrol_format__' . $entity_type,
-      array('enabled' => 'none'));
+  if (!$is_edit) {
+    $settings += variable_get('readmorecontrol_format__' . $entity_type, array('enabled' => 'none'));
+  }
+
   $settings += array(
     'enabled' => 'none',
     'text' => '',
@@ -196,11 +242,25 @@ function readmorecontrol_format_settings($entity_type, $bundle = NULL, $view_mod
     'fragment' => '',
     'title' => '',
     'class' => '',
-    'template' => '',
-    'placement' => 'none',
-    'view_modes' => $entity_type == 'node' ? array('teaser') : array(),
+    'rel' => '',
+    'target' => '',
+    'placement' => readmorecontrol_default_placement($entity_type, $view_mode),
   );
+
   return $settings;
+}
+
+/**
+ * Helper function to determine the best placement default value.
+ */
+function readmorecontrol_default_placement($entity_type, $view_mode) {
+  switch ($view_mode) {
+    case 'search_result':
+      return 'search_snippet';
+
+    default:
+      return 'none';
+  }
 }
 
 /**
@@ -287,7 +347,7 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
   $actual_full_mode = empty($view_mode_settings[$full_mode]['custom_settings']) ? 'default' : $full_mode;
 
   // Determine the behaviour of the modules processing of the link.
-  $entity->readmorebehaviour = readmorecontrol_entity_behaviour($entity_type, $bundle, $view_mode);
+  $entity->readmorebehaviour = $behaviour;
   switch ($entity->readmorebehaviour) {
     case 'always':
       $entity->readmore_required = TRUE;
@@ -370,24 +430,31 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
     $title = entity_label($entity_type, $entity);
     $title_stripped = strip_tags($title);
     $uri = entity_uri($entity_type, $entity);
-    // @todo: Do we care what is set in $uri['options']?
     $readmorelink = array(
       'title' => t('Read more<span class="element-invisible"> about @title</span>', array('@title' => $title_stripped)),
       'href' => $uri['path'],
       'html' => TRUE,
       'attributes' => array('title' => $title_stripped),
     );
+    if (in_array($view_mode, variable_get('readmodecontrol_external_view_modes', array('rss')))) {
+      $readmorelink['absolute'] = 1;
+    }
   }
 
   if (!empty($format['text'])) {
-    $readmorelink['title'] = filter_xss(_rmc_token_replace($format['text'], $entity_type, $entity));
+    if ($title = filter_xss_admin(_rmc_token_replace($format['text'], $entity_type, $entity))) {
+      $readmorelink['title'] = $title;
+      $readmorelink['html'] = 1;
+    }
   }
+
+  // The generated URL is passed through check_plain() internally.
   if (!empty($format['href'])) {
     if ($format['href'] == '<none>') {
       unset($readmorelink['href']);
     }
     else {
-      $readmorelink['href'] = token_replace(_rmc_token_replace($format['href'], $entity_type, $entity));
+      $readmorelink['href'] = _rmc_token_replace($format['href'], $entity_type, $entity);
     }
   }
   if (!empty($format['query'])) {
@@ -406,7 +473,8 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
     }
   }
 
-  // Append any link attributes.
+  // Append any link attributes. Like the link options, these have are also
+  // passed through check_plain() internally.
   $attributes = empty($readmorelink['attributes']) ? array() : $readmorelink['attributes'];
   if (!empty($format['title'])) {
     if ($attr_title = _rmc_token_replace($format['title'], $entity_type, $entity)) {
@@ -415,19 +483,39 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
   }
   if (!empty($attributes['class'])) {
     $attributes['class'] = is_array($attributes['class']) ? $attributes['class'] : explode(' ', $attributes['class']);
+    if (!in_array('read-more', $attributes['class'])) {
+      $attributes['class'][] = 'read-more';
+    }
   }
-  $attributes['class'][] = 'read-more';
+  else {
+    $attributes['class'] = array('read-more');
+  }
   if (!empty($format['class'])) {
     if ($classes = _rmc_token_replace($format['class'], $entity_type, $entity)) {
       $attributes['class'][] = $classes;
     }
   }
+
   $attributes['class'] = implode(' ', $attributes['class']);
+  if (!empty($format['rel'])) {
+    if ($rel_title = _rmc_token_replace($format['rel'], $entity_type, $entity)) {
+      $attributes['rel'] = $rel_title;
+    }
+  }
+  if (!empty($format['target'])) {
+    $attributes['target'] = $format['target'];
+  }
   $readmorelink['attributes'] = $attributes;
 
-  $entity->readmorelink = _readmorecontrol_render($entity_type, $bundle, $readmorelink);
+  $entity->readmorelink = theme('readmorecontrol_link__' . $entity_type, array(
+    'entity' => $entity,
+    'entity_type' => $entity_type,
+    'bundle' => $bundle,
+    'link' => $readmorelink,
+  ));
+
   $entity->readmorelink_raw = $readmorelink;
-  $entity->readmorelink_inline = strpos($format['placement'], '_inline');
+  $entity->readmorelink_placement = $format['placement'];
 
   if (!$entity->readmore_required || $view_mode == 'search_result') {
     if ($has_readmore) {
@@ -478,15 +566,12 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
     }
 
     if (isset($field_item)) {
-      $readmorelink['attributes']['class'] .= ' read-more';
-      $link = _readmorecontrol_render($entity_type, $bundle, $readmorelink);
-
       $deltas = element_children($field_item);
       $last_delta = array_pop($deltas);
       if (isset($last_delta)) {
         $item = &$field_item[$last_delta];
         if (strpos($format['placement'], '_inline') && isset($item['#markup'])) {
-          $link = ' <span class="read-more-wrapper">' . $link . '</span>';
+          $link = ' <span class="read-more-link">' . $entity->readmorelink . '</span>';
           if (preg_match('!</?(?:p|div)[^>]*>\s*$!i', $item['#markup'], $match, PREG_OFFSET_CAPTURE)) {
             $insert_point = strpos('teaser', $item['#markup']) + $match[0][1];
             $item['#markup'] = substr_replace($item['#markup'], $link, $insert_point, 0);
@@ -496,11 +581,11 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
           }
         }
         else {
-          $field_item[$last_delta]['#suffix'] = '<div class="read-more-wrapper">' . $link . '</div>';
+          $field_item[$last_delta]['#suffix'] = '<div class="read-more-link">' . $entity->readmorelink . '</div>';
         }
       }
       else {
-        $field_item['#suffix'] = '<div class="read-more-wrapper test">' . $link . '</div>';
+        $field_item['#suffix'] = '<div class="read-more-link">' . $entity->readmorelink . '</div>';
       }
       if ($has_readmore) {
         unset($entity->content['links'][$entity_type]['#links'][$entity_type . '-readmore']);
@@ -525,10 +610,14 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
   $entity->content['links'][$entity_type]['#links'][$entity_type . '-readmore'] = $readmorelink;
 }
 
-/**
- * Helper function to render the read more link.
- */
-function _readmorecontrol_render($entity_type, $bundle, $readmore) {
+function theme_readmorecontrol_link($variables) {
+  $readmore = $variables['link'];
+
+  // Also available.
+  $entity_type = $variables['entity_type'];
+  $entity = $variables['entity'];
+  $bundle = $variables['bundle'];
+
   if (isset($readmore['href'])) {
     // Pass in $readmore as $options, they share the same keys.
     return l($readmore['title'], $readmore['href'], $readmore);
@@ -544,19 +633,23 @@ function _readmorecontrol_render($entity_type, $bundle, $readmore) {
     }
     return '<span' . $span_attributes . '>' . $readmore['title'] . '</span>';
   }
-  else {
-    return '';
-  }
+  return '';
 }
 
 /**
  * Wrapper function for token_replace().
+ *
+ * Returned text is not sanitized.
  */
 function _rmc_token_replace($text, $entity_type, $entity) {
-  return token_replace($text, array(
-    $entity_type => $entity,
-    array('clear' => 1),
-  ));
+  // Only process if there is a hint that a token present.
+  if (strpos($text, ']')) {
+    return token_replace($text, array(
+      $entity_type => $entity,
+      array('clear' => 1, 'sanitize' => 0),
+    ));
+  }
+  return $text;
 }
 
 ################################################################################

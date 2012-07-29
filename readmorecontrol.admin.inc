@@ -37,12 +37,15 @@ function readmorecontrol_admin_settings_form($form, &$form_state, $entity_type =
     '#collapsed' => TRUE,
   );
   $settings = readmorecontrol_format_settings($entity_type, NULL, NULL, TRUE);
-  $form[$key] += readmorecontrol_formatting_settings_form($settings, $key);
+  $form[$key] += readmorecontrol_formatting_settings_form($entity_type, $entity_info, $settings, $key);
   unset($form[$key]['enabled']['#options']['global']);
   return system_settings_form($form);
 }
 
-function readmorecontrol_formatting_settings_form($settings, $key) {
+function readmorecontrol_formatting_settings_form($entity_type, $entity_info, $settings, $key) {
+  $subform['#attached']['css'] = array(
+    drupal_get_path('module', 'readmorecontrol') . '/readmorecontrol.css',
+  );
   $subform['enabled'] = array(
     '#type' => 'radios',
     '#title' => t('Enable custom link processing'),
@@ -64,39 +67,80 @@ function readmorecontrol_formatting_settings_form($settings, $key) {
     '#title' =>  t('Link text'),
     '#default_value' => $settings['text'],
     '#states' => $states,
+    '#description' => t('Defaults to: "<em>Read more&lt;span class="element-invisible"&gt; about @title&lt;/span&gt;</em>".<br/>Replace "@title with" corresponding token, eg: "[node:title]"'),
+    '#attributes' => array('class' => array('readmorecontrol')),
   );
   $subform['href'] = array(
     '#type' => 'textfield',
     '#title' =>  t('URL'),
     '#default_value' => $settings['href'],
     '#states' => $states,
+    '#prefix' => '<div class="clearfix"><div class="readmorecontrol-inline">',
+    '#suffix' => '</div>',
+    '#size' => 50,
+    '#description' => t('Default links to content. e.g. "<em>node/1</em>".<br/>Use "<em>&lt;none&gt;</em>" to remove link and just show the text.'),
+    '#attributes' => array('class' => array('readmorecontrol')),
   );
   $subform['query'] = array(
     '#type' => 'textfield',
     '#title' =>  t('Query'),
     '#default_value' => $settings['query'],
     '#states' => $states,
-    '#field_prefix' => '?'
+    '#field_prefix' => '&nbsp;?&nbsp;',
+    '#prefix' => '<div class="readmorecontrol-inline">',
+    '#suffix' => '</div>',
+    '#size' => 20,
+    '#attributes' => array('class' => array('readmorecontrol')),
   );
   $subform['fragment'] = array(
     '#type' => 'textfield',
     '#title' =>  t('Fragment'),
     '#default_value' => $settings['fragment'],
     '#states' => $states,
-    '#field_prefix' => '#'
+    '#field_prefix' => '&nbsp;#&nbsp;',
+    '#prefix' => '<div class="readmorecontrol-inline">',
+    '#suffix' => '</div></div>',
+    '#size' => 20,
+    '#attributes' => array('class' => array('readmorecontrol')),
   );
   $subform['title'] = array(
     '#type' => 'textfield',
     '#title' =>  t('Link title (hover) text'),
     '#default_value' => $settings['title'],
     '#states' => $states,
+    '#attributes' => array('class' => array('readmorecontrol')),
   );
   $subform['class'] = array(
     '#type' => 'textfield',
     '#title' =>  t('Additional classes'),
     '#default_value' => $settings['class'],
+    '#field_prefix' => 'class = "',
+    '#field_suffix' => '"',
+    '#states' => $states,
+    '#attributes' => array('class' => array('readmorecontrol')),
+  );
+  $subform['rel'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Rel attribute'),
+    '#description' => t('When output, this link will have this rel attribute. The most common usage is <a href="http://en.wikipedia.org/wiki/Nofollow">rel=&quot;nofollow&quot;</a> which prevents some search engines from spidering links.'),
+    '#default_value' => $settings['rel'],
+    '#field_prefix' => 'rel = "',
+    '#field_suffix' => '"',
+    '#states' => $states,
+    '#attributes' => array('class' => array('readmorecontrol')),
+  );
+  $subform['target'] = array(
+    '#type' => 'radios',
+    '#title' => t('Link target'),
+    '#default_value' => $settings['target'],
+    '#options' => array(
+      '' =>  t('Default (no target attribute)'),
+      '_blank' => t('Opens the linked document in a new window or tab'),
+      '_top' => t('Opens the linked document in the top window frame'),
+    ),
     '#states' => $states,
   );
+
   $subform['placement'] = array(
     '#type' => 'radios',
     '#title' => t('Link placement'),
@@ -113,6 +157,25 @@ function readmorecontrol_formatting_settings_form($settings, $key) {
     '#default_value' => $settings['placement'],
     '#states' => $states,
   );
+
+  $subform['help'] = array(
+    '#type' => 'fieldset',
+    '#title' =>  t('Help'),
+    '#states' => $states,
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $subform['help']['general'] = array(
+    '#markup' => t('<p>Leave fields empty to use the system defaults. Tokens can be used in all text fields for the current %entity.</p>',
+      array('%entity' => $entity_info['label'])),
+  );
+  if (module_exists('token')) {
+    $subform['help']['tokens'] = array(
+      '#theme' => 'token_tree',
+      '#token_types' => array($entity_type),
+      '#recursion_limit' => 2,
+    );
+  }
   return $subform;
 }
 
@@ -125,7 +188,7 @@ function _readmorecontrol_form_field_ui_field_edit_form_alter(&$form, &$form_sta
   $instance = $form['#instance'];
   $field = $form['#field'];
   $entity_type = $instance['entity_type'];
-  if ($entity_type == 'node') {
+  if (readmorecontrol_supported_entity($entity_type)) {
     $form['instance']['readmore_behaviour'] = array(
       '#type' => 'radios',
       '#title' => t('Read More Behaviour'),
@@ -256,7 +319,7 @@ function _readmorecontrol_form_field_ui_display_overview_form_alter(&$form, &$fo
   }
   else {
     $t_args['%display'] = $entity_info['view modes'][$view_mode]['label'];
-    $disabled_modes = variable_get('readmorecontrol_disabled_view_modes', array('search_index', 'token'));
+    $disabled_modes = variable_get('readmorecontrol_disabled_view_modes', readmorecontrol_excluded_view_modes());
     if ($view_mode == 'full' || in_array($view_mode, $disabled_modes)) {
       $fieldset['#description'] = t('<p class="readmorecontrol-help">Read more settings are not available on the %display display mode.</p>', $t_args);
       return;
@@ -282,12 +345,19 @@ function _readmorecontrol_form_field_ui_display_overview_form_alter(&$form, &$fo
     '#title' => t('Formatting settings'),
     '#description' => t('Here you can specify the wording, appearance and position of the Read More Link.'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => FALSE,
     '#tree' => TRUE,
   );
   $settings = readmorecontrol_format_settings($entity_type, $bundle, $view_mode, TRUE);
-  $fieldset[$key] += readmorecontrol_formatting_settings_form($settings, $key);
+  $fieldset[$key] += readmorecontrol_formatting_settings_form($entity_type, $entity_info, $settings, $key);
 
+  if ($view_mode == 'search_result') {
+    $fieldset[$key]['placement']['#options'] = array(
+      'search_snippet_inline' => t('Inline in the search results snippet'),
+      'search_snippet' => t('New line after the search results snippet'),
+      'search_info' => t('In the results info'),
+    );
+  }
   $form['#submit'][] = 'readmorecontrol_form_field_ui_display_overview_form_alter_submit';
 }
 
@@ -311,6 +381,7 @@ function _readmorecontrol_form_field_ui_display_overview_form_alter_submit(&$for
  * Helper function to get the default display options.
  */
 function readmorecontrol_display_options($entity_type, $bundle = NULL, $view_mode = NULL) {
+  $entity_info = entity_get_info($entity_type);
   $options = array();
   if (isset($bundle)) {
     $options['default'] = t('Inherit default behaviour');
