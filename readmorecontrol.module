@@ -197,11 +197,12 @@ function readmorecontrol_entity_behaviour($entity_type, $bundle, $view_mode) {
     return 'none';
   }
   else {
-    $behaviour = variable_get("readmorecontrol_behaviour__{$entity_type}__{$bundle}__{$view_mode}", 'default');
+    $node_teaser = $entity_type == 'node' && $view_mode == 'teaser';
+    $behaviour = variable_get("readmorecontrol_behaviour__{$entity_type}__{$bundle}__{$view_mode}", $node_teaser ? 'default' : 'none');
     if ($behaviour == 'default') {
       $behaviour = variable_get("readmorecontrol_behaviour__{$entity_type}__{$bundle}", 'default');
       if ($behaviour == 'default') {
-        $system_default = $entity_type == 'node' && $view_mode == 'teaser' ? 'always' : 'none';
+        $system_default = $node_teaser ? 'always' : 'none';
         $behaviour = variable_get("readmorecontrol_behaviour__{$entity_type}", $system_default);
       }
     }
