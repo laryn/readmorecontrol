@@ -410,14 +410,16 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
 
               $func = "readmorecontrol_{$display['module']}_compare_items";
               if (function_exists($func)) {
-                $content = array(
+                $context = array(
                   'display' => $display,
                   'display_full' => $display_full,
                   'instance' => $instance,
                   'field' => $field,
                   'langcode' => $langcode,
+                  'entity' => $entity,
+                  'entity_type' => $entity_type,
                 );
-                if ($func($items, $content)) {
+                if ($func($items, $context)) {
                   $entity->readmore_required = TRUE;
                   break;
                 }
@@ -539,7 +541,6 @@ function readmorecontrol_entity_view($entity, $entity_type, $view_mode, $langcod
 
   $entity->readmorelink_raw = $readmorelink;
   $entity->readmorelink_placement = $format['placement'];
-
   if (!$entity->readmore_required || $view_mode == 'search_result') {
     if ($has_readmore) {
       unset($entity->content['links'][$entity_type]['#links'][$entity_type . '-readmore']);
@@ -682,8 +683,8 @@ function _rmc_token_replace($text, $entity_type, $entity) {
 /**
  * Implements the callback readmorecontrol_MODULE_compare_items().
  */
-function readmorecontrol_text_compare_items($items, $content) {
-  extract($content, EXTR_SKIP);
+function readmorecontrol_text_compare_items($items, $context) {
+  extract($context, EXTR_SKIP);
 
   // We can bypass processing of some combinations.
   if ($display['type'] == $display_full['type']) {
@@ -726,6 +727,16 @@ function readmorecontrol_text_compare_items($items, $content) {
         case 'text_plain':
           $$var = strip_tags($item['value']);
           break;
+
+        case 'smart_trim_format':
+          $$var = '';
+          if (function_exists('smart_trim_field_formatter_view')) {
+            $smart_trim = smart_trim_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, array($item), $display);
+            if (isset($smart_trim[0]['#markup'])) {
+              $$var = $smart_trim[0]['#markup'];
+            }
+          }
+          break;
       }
     }
 
@@ -735,4 +746,8 @@ function readmorecontrol_text_compare_items($items, $content) {
 
   }
   return FALSE;
+}
+
+function readmorecontrol_smart_trim_compare_items($items, $context) {
+  return readmorecontrol_text_compare_items($items, $context);
 }
