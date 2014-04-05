@@ -243,13 +243,15 @@ function readmorecontrol_format_settings($entity_type, $bundle = NULL, $view_mod
     // Find the setting with the highest precesion, but discard if the use
     // global setting is selected.
     if ($view_mode) {
-      $settings += (array) variable_get('readmorecontrol_format__' . $entity_type . '__' . $bundle. '__' . $view_mode, array('enabled' => 'global'));
+      $settings += (array) variable_get('readmorecontrol_format__' . $entity_type . '__' . $bundle. '__' . $view_mode, array());
+      $settings += array('enabled' => 'global');
       if (!$is_edit && $settings['enabled'] == 'global') {
         $settings = array();
       }
     }
     if ($bundle) {
-      $settings += (array) variable_get('readmorecontrol_format__' . $entity_type . '__' . $bundle, array('enabled' => 'global'));
+      $settings += (array) variable_get('readmorecontrol_format__' . $entity_type . '__' . $bundle, array());
+      $settings += array('enabled' => 'global');
       if ($settings['enabled'] == 'global') {
         $settings = array();
       }
