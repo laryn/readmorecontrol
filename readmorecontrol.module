@@ -713,6 +713,10 @@ function readmorecontrol_text_compare_items($items, $context) {
           if ($test_display['type'] == 'text_trimmed') {
             $$var = text_summary($$var, $instance['settings']['text_processing'] ? $item['format'] : NULL, $test_display['settings']['trim_length']);
           }
+          else {
+            // If <!--break--> was used, we need to strip it out.
+            $$var = str_replace('<!--break-->', '', $$var);  
+          }
           break;
 
         case 'text_summary_or_trimmed':
